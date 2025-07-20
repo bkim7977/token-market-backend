@@ -6,7 +6,7 @@ import React, { useState, useEffect } from 'react';
 // Environment-aware API configuration
 const API_BASE_URL = process.env.NODE_ENV === 'development'
   ? 'http://localhost:8000'
-  : 'https://your-backend-url.railway.app'; // Replace with your deployed URL
+  : 'https://token-market-backend-production.up.railway.app';
 
 // For immediate testing with ngrok (temporary solution):
 // const API_BASE_URL = 'https://your-ngrok-url.ngrok.io';
