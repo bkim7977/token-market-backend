@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Token Market - Frontend Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .form-group { margin: 15px 0; }
+        input { 
+            padding: 10px; 
+            margin: 5px; 
+            width: 250px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+        }
+        button { 
+            padding: 10px 20px; 
+            margin: 5px; 
+            cursor: pointer; 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            border-radius: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .user-info { 
+            background: #e8f5e8; 
+            padding: 20px; 
+            border-radius: 10px; 
+            border-left: 4px solid #28a745;
+        }
+        .collectible { 
+            border: 1px solid #ddd; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            background: #f8f9fa;
+        }
+        .status { padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .loading { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪙 Token Market Frontend Demo</h1>
+        <p style="text-align: center; color: #666;">
+            Live demo connecting to your Token Market Backend
+        </p>
+        
+        <!-- Status Messages -->
+        <div id="status-messages"></div>
+        
+        <!-- Authentication Section -->
+        <div id="auth-section">
+            <h2>🔐 User Authentication</h2>
+            
+            <div id="login-forms">
+                <div style="display: flex; gap: 40px;">
+                    <!-- Registration Form -->
+                    <div style="flex: 1;">
+                        <h3>📝 Register New Account</h3>
+                        <div class="form-group">
+                            <input type="text" id="reg-username" placeholder="Username" required>
+                            <br>
+                            <input type="email" id="reg-email" placeholder="Email" required>
+                            <br>
+                            <input type="password" id="reg-password" placeholder="Password (min 6 chars)" required>
+                            <br>
+                            <button onclick="register()">Register</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Login Form -->
+                    <div style="flex: 1;">
+                        <h3>🔑 Login to Account</h3>
+                        <div class="form-group">
+                            <input type="email" id="login-email" placeholder="Email" required>
+                            <br>
+                            <input type="password" id="login-password" placeholder="Password" required>
+                            <br>
+                            <button onclick="login()">Login</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- User Info (Hidden by default) -->
+            <div id="user-info" style="display: none;">
+                <div class="user-info">
+                    <h3>✅ Logged In Successfully!</h3>
+                    <p id="user-details"></p>
+                    <p id="user-balance"></p>
+                    <button onclick="refreshBalance()">🔄 Refresh Balance</button>
+                    <button onclick="logout()" style="background: #dc3545;">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Marketplace Section -->
+        <div id="collectibles-section">
+            <h2>🏪 Marketplace</h2>
+            <p>Browse available collectibles (public data - no login required)</p>
+            
+            <div style="margin-bottom: 15px;">
+                <button onclick="loadCollectibles()">📋 Load Collectibles</button>
+                <span id="collectibles-count"></span>
+            </div>
+            
+            <div id="collectibles-list"></div>
+        </div>
+        
+        <!-- API Testing Section -->
+        <div id="api-testing">
+            <h2>🧪 API Testing</h2>
+            <p>Test your backend API endpoints</p>
+            
+            <button onclick="testHealth()">❤️ Health Check</button>
+            <button onclick="testPublicEndpoint()">🌍 Test Public Endpoint</button>
+            <button onclick="testProtectedEndpoint()">🔐 Test Protected Endpoint</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentToken = localStorage.getItem('token');
+        let currentUser = null;
+        
+        // Initialize page
+        window.addEventListener('DOMContentLoaded', function() {
+            showStatus('🚀 Frontend loaded! Checking backend connection...', 'loading');
+            testHealth();
+            
+            if (currentToken) {
+                showUserInfo();
+                loadUserData();
+            }
+            
+            // Auto-load collectibles
+            loadCollectibles();
+        });
+        
+        function showStatus(message, type = 'success') {
+            const container = document.getElementById('status-messages');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            
+            container.innerHTML = '';
+            container.appendChild(statusDiv);
+            
+            // Auto-hide success messages after 3 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    if (container.contains(statusDiv)) {
+                        container.removeChild(statusDiv);
+                    }
+                }, 3000);
+            }
+        }
+        
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showStatus(`✅ Backend connected: ${data.message}`, 'success');
+                } else {
+                    showStatus('❌ Backend responded with error', 'error');
+                }
+            } catch (error) {
+                showStatus('❌ Cannot connect to backend. Is it running on http://localhost:8000?', 'error');
+            }
+        }
+        
+        async function register() {
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            
+            if (!username || !email || !password) {
+                showStatus('❌ Please fill in all fields', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showStatus('❌ Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('⏳ Registering user...', 'loading');
+                
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentToken = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem('token', currentToken);
+                    
+                    showUserInfo();
+                    await loadUserData();
+                    
+                    showStatus(`✅ Registration successful! Welcome, ${currentUser.username}!`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('reg-username').value = '';
+                    document.getElementById('reg-email').value = '';
+                    document.getElementById('reg-password').value = '';
+                } else {
+                    showStatus(`❌ Registration failed: ${data.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                showStatus('❌ Please fill in both email and password', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('⏳ Logging in...', 'loading');
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    currentToken = data.access_token;
+                    currentUser = data.user;
+                    localStorage.setItem('token', currentToken);
+                    
+                    showUserInfo();
+                    await loadUserData();
+                    
+                    showStatus(`✅ Login successful! Welcome back, ${currentUser.username}!`, 'success');
+                    
+                    // Clear form
+                    document.getElementById('login-email').value = '';
+                    document.getElementById('login-password').value = '';
+                } else {
+                    showStatus(`❌ Login failed: ${data.detail}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function loadUserData() {
+            if (!currentToken) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/profile/balance`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                
+                if (response.ok) {
+                    const balance = await response.json();
+                    document.getElementById('user-details').innerHTML = 
+                        `<strong>User:</strong> ${currentUser.username}<br><strong>Email:</strong> ${currentUser.email}`;
+                    document.getElementById('user-balance').innerHTML = 
+                        `<strong>💰 Balance:</strong> ${balance.balance} tokens<br><small>Last updated: ${new Date(balance.last_updated).toLocaleString()}</small>`;
+                } else if (response.status === 401) {
+                    showStatus('❌ Session expired. Please login again.', 'error');
+                    logout();
+                } else {
+                    showStatus('❌ Error loading user data', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function refreshBalance() {
+            showStatus('⏳ Refreshing balance...', 'loading');
+            await loadUserData();
+            showStatus('✅ Balance refreshed!', 'success');
+        }
+        
+        async function loadCollectibles() {
+            try {
+                showStatus('⏳ Loading collectibles...', 'loading');
+                
+                const response = await fetch(`${API_BASE}/collectibles`);
+                const collectibles = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('collectibles-count').textContent = 
+                        `(${collectibles.length} items found)`;
+                    
+                    const container = document.getElementById('collectibles-list');
+                    
+                    if (collectibles.length === 0) {
+                        container.innerHTML = '<p>No collectibles available yet.</p>';
+                    } else {
+                        container.innerHTML = collectibles.map(item => `
+                            <div class="collectible">
+                                <h4>🎮 ${item.name}</h4>
+                                <p><strong>Set:</strong> ${item.set_name}</p>
+                                <p><strong>Type:</strong> ${item.type || 'Unknown'}</p>
+                                <p><strong>Rarity:</strong> ${item.rarity || 'Unknown'}</p>
+                                <p><strong>Edition:</strong> ${item.edition || 'Standard'}</p>
+                                <p><strong>💰 Price:</strong> $${item.current_price || 'N/A'}</p>
+                                ${item.metadata ? `<p><strong>Details:</strong> ${JSON.stringify(item.metadata)}</p>` : ''}
+                            </div>
+                        `).join('');
+                    }
+                    
+                    showStatus(`✅ Loaded ${collectibles.length} collectibles`, 'success');
+                } else {
+                    showStatus('❌ Error loading collectibles', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testPublicEndpoint() {
+            try {
+                const response = await fetch(`${API_BASE}/collectibles`);
+                if (response.ok) {
+                    showStatus('✅ Public endpoint test successful', 'success');
+                } else {
+                    showStatus('❌ Public endpoint test failed', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Public endpoint error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testProtectedEndpoint() {
+            if (!currentToken) {
+                showStatus('❌ Please login first to test protected endpoint', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/profile/balance`, {
+                    headers: { 'Authorization': `Bearer ${currentToken}` }
+                });
+                
+                if (response.ok) {
+                    showStatus('✅ Protected endpoint test successful', 'success');
+                } else if (response.status === 401) {
+                    showStatus('❌ Protected endpoint: Unauthorized (token expired?)', 'error');
+                } else {
+                    showStatus('❌ Protected endpoint test failed', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ Protected endpoint error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showUserInfo() {
+            document.getElementById('login-forms').style.display = 'none';
+            document.getElementById('user-info').style.display = 'block';
+        }
+        
+        function logout() {
+            currentToken = null;
+            currentUser = null;
+            localStorage.removeItem('token');
+            
+            document.getElementById('login-forms').style.display = 'block';
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('user-details').textContent = '';
+            document.getElementById('user-balance').textContent = '';
+            
+            showStatus('✅ Logged out successfully', 'success');
+        }
+    </script>
+</body>
+</html>
