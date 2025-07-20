@@ -4,7 +4,7 @@ uvicorn[standard]==0.24.0
 pydantic[email]==2.11.7
 
 # Database & Auth
-supabase==2.11.5
+supabase==2.17.0
 sqlalchemy==2.0.36
 alembic==1.16.4
 python-dotenv==1.0.1
