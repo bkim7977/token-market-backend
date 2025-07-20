@@ -5,7 +5,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Start command
-CMD ["python", "railway_start.py"]orking directory
+CMD ["python", "-m", "uvicorn", "minimal_test:app", "--host", "0.0.0.0", "--port", "8000"]orking directory
 WORKDIR /app
 
 # Install system dependencies
