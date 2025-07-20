@@ -45,10 +45,11 @@ def main():
     # Import and start the application
     try:
         import uvicorn
-        from app.api_railway import app
+        # Use minimal test first to verify Railway deployment works
+        from minimal_test import app
         
         port = int(os.getenv('PORT', 8000))
-        logger.info(f"Starting server on port {port}")
+        logger.info(f"Starting minimal test server on port {port}")
         
         uvicorn.run(
             app,
