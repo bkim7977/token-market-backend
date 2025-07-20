@@ -1,1 +1,1 @@
-web: python -m uvicorn minimal_test:app --host 0.0.0.0 --port $PORT
+web: python -m uvicorn app.api_railway:app --host 0.0.0.0 --port $PORT
